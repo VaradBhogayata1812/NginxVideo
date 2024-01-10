@@ -37,7 +37,7 @@ RUN mkdir -p /var/www/html \
     && mkdir -p /var/log/nginx
     
 # Copy your custom NGINX config into the container
-COPY nginx.conf /usr/local/nginx-streaming/conf/nginx.conf
+COPY nginx/nginx.conf /usr/local/nginx-streaming/conf/nginx.conf
 
 # Expose the necessary ports
 EXPOSE 80
