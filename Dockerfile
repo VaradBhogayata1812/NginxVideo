@@ -1,24 +1,50 @@
-FROM ubuntu:14.04
-MAINTAINER Andy C "aecobley@dundee.ac.uk"
-# From https://www.leaseweb.com/labs/2013/11/streaming-video-demand-nginx-rtmp-module/
-ENV REFRESHED_AT 2015-10-21
-RUN apt-get -y -q update 
-RUN apt-get install -y git
-RUN apt-get install -y gcc
-RUN apt-get install -y make
-RUN apt-get install -y libpcre3-dev
-RUN apt-get install -y libssl-dev
-RUN apt-get install -y wget
-RUN mkdir -p /home/nginx-rtmp-module
-RUN git clone https://github.com/arut/nginx-rtmp-module /home/nginx-rtmp-module
-RUN mkdir -p /home/nginx
-RUN cd /home/nginx && wget http://nginx.org/download/nginx-1.4.3.tar.gz && tar zxpvf nginx-1.4.3.tar.gz
-RUN cd /home/nginx/nginx-1.4.3 && ./configure --add-module=/home/nginx-rtmp-module/ --with-http_ssl_module --prefix=/usr/local/nginx-streaming/
-RUN cd /home/nginx/nginx-1.4.3&& make && make install
-RUN mkdir -p /var/www/html
-RUN mkdir -p /var/nginx-streaming
-RUN mkdir -p /var/log/nginx
-RUN cp /home/nginx-rtmp-module/stat.xsl /var/nginx-streaming/
-ADD nginx/nginx.conf /usr/local/nginx-streaming/conf/nginx.conf
+# Use a more recent Ubuntu base image
+FROM ubuntu:20.04
+
+LABEL maintainer="aecobley@dundee.ac.uk"
+
+# Avoid warnings by switching to noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    git \
+    gcc \
+    make \
+    libpcre3-dev \
+    libssl-dev \
+    zlib1g-dev \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and compile NGINX with the RTMP module
+RUN git clone https://github.com/arut/nginx-rtmp-module.git /tmp/nginx-rtmp-module \
+    && mkdir -p /tmp/nginx \
+    && cd /tmp/nginx \
+    && wget http://nginx.org/download/nginx-1.21.6.tar.gz \
+    && tar zxpvf nginx-1.21.6.tar.gz \
+    && cd nginx-1.21.6 \
+    && ./configure --add-module=/tmp/nginx-rtmp-module/ --with-http_ssl_module --prefix=/usr/local/nginx-streaming/ \
+    && make \
+    && make install
+
+# Clean up the build directory
+RUN rm -rf /tmp/nginx-rtmp-module /tmp/nginx
+
+# Set up directories
+RUN mkdir -p /var/www/html \
+    && mkdir -p /var/nginx-streaming \
+    && mkdir -p /var/log/nginx
+
+# Copy the stat.xsl file for RTMP statistics
+COPY stat.xsl /var/nginx-streaming/
+
+# Copy your custom NGINX config into the container
+COPY nginx.conf /usr/local/nginx-streaming/conf/nginx.conf
+
+# Expose the necessary ports
 EXPOSE 80
 EXPOSE 1935
+
+# Use the "exec" form of CMD to help NGINX shut down gracefully on SIGTERM (i.e., `docker stop`)
+CMD ["/usr/local/nginx-streaming/sbin/nginx", "-g", "daemon off;"]
