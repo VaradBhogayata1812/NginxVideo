@@ -35,10 +35,7 @@ RUN rm -rf /tmp/nginx-rtmp-module /tmp/nginx
 RUN mkdir -p /var/www/html \
     && mkdir -p /var/nginx-streaming \
     && mkdir -p /var/log/nginx
-
-# Copy the stat.xsl file for RTMP statistics
-COPY stat.xsl /var/nginx-streaming/
-
+    
 # Copy your custom NGINX config into the container
 COPY nginx.conf /usr/local/nginx-streaming/conf/nginx.conf
 
